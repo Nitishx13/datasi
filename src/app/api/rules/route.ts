@@ -4,7 +4,11 @@ import { getSql } from "@/lib/db";
 
 export async function GET() {
   const sql = getSql();
-  const rows = await sql<{ config: unknown }[]>`select config from rules_config where id = 1`;
+  const rows = (await sql`
+    select config
+    from rules_config
+    where id = 1
+  `) as Array<{ config: unknown }>;
   return NextResponse.json({ config: rows[0]?.config ?? null });
 }
 

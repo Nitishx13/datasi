@@ -1,25 +1,32 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { getSql } from "@/lib/db";
 
-export async function GET(_req: Request, ctx: { params: { userId: string } }) {
-  const { userId } = ctx.params;
+type GoalRow = {
+  user_id: string;
+  inputs: unknown;
+  targets: unknown;
+  current: unknown;
+  saved_at: string;
+};
+
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ userId: string }> }) {
+  const { userId } = await ctx.params;
   const sql = getSql();
 
-  const rows = await sql<{
-    user_id: string;
-    inputs: unknown;
-    targets: unknown;
-    current: unknown;
-    saved_at: string;
-  }[]>`select user_id, inputs, targets, current, saved_at from goals where user_id = ${userId} limit 1`;
+  const rows = (await sql`
+    select user_id, inputs, targets, current, saved_at
+    from goals
+    where user_id = ${userId}
+    limit 1
+  `) as GoalRow[];
 
   const row = rows[0] ?? null;
   return NextResponse.json({ goal: row });
 }
 
-export async function PUT(req: Request, ctx: { params: { userId: string } }) {
-  const { userId } = ctx.params;
+export async function PUT(req: NextRequest, ctx: { params: Promise<{ userId: string }> }) {
+  const { userId } = await ctx.params;
   const sql = getSql();
 
   const body = (await req.json().catch(() => null)) as null | {
@@ -45,19 +52,18 @@ export async function PUT(req: Request, ctx: { params: { userId: string } }) {
     do update set inputs = excluded.inputs, targets = excluded.targets, current = excluded.current, saved_at = now()
   `;
 
-  const rows = await sql<{
-    user_id: string;
-    inputs: unknown;
-    targets: unknown;
-    current: unknown;
-    saved_at: string;
-  }[]>`select user_id, inputs, targets, current, saved_at from goals where user_id = ${userId} limit 1`;
+  const rows = (await sql`
+    select user_id, inputs, targets, current, saved_at
+    from goals
+    where user_id = ${userId}
+    limit 1
+  `) as GoalRow[];
 
   return NextResponse.json({ goal: rows[0] ?? null });
 }
 
-export async function DELETE(_req: Request, ctx: { params: { userId: string } }) {
-  const { userId } = ctx.params;
+export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ userId: string }> }) {
+  const { userId } = await ctx.params;
   const sql = getSql();
 
   await sql`delete from goals where user_id = ${userId}`;

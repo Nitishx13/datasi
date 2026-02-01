@@ -35,7 +35,7 @@ export default function AdminRecommendationsPage() {
             apiTemplates.map((t) => ({
               id: String(t.id),
               title: String(t.title),
-              bullets: Array.isArray(t.bullets) ? t.bullets.map((b) => String(b)) : [],
+              bullets: Array.isArray(t.bullets) ? t.bullets.map((b: unknown) => String(b)) : [],
               enabled: t.enabled !== false,
               impactMultiplier: Number.isFinite(Number(t.impactMultiplier)) ? Number(t.impactMultiplier) : 1,
             })),

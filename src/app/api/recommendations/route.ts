@@ -13,11 +13,11 @@ type TemplateRow = {
 
 export async function GET() {
   const sql = getSql();
-  const rows = await sql<TemplateRow[]>`
+  const rows = (await sql`
     select id, title, bullets, enabled, impact_multiplier, updated_at
     from recommendation_templates
     order by updated_at desc
-  `;
+  `) as TemplateRow[];
 
   const templates = rows.map((r) => ({
     id: r.id,

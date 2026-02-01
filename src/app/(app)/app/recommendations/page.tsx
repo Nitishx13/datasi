@@ -52,7 +52,7 @@ export default function RecommendationsPage() {
           return {
             id: t.id,
             title: t.title,
-            bullets: t.bullets,
+            bullets: Array.isArray(t.bullets) ? t.bullets.map((b: unknown) => String(b)) : [],
             impactScore,
           };
         })
@@ -123,8 +123,9 @@ export default function RecommendationsPage() {
                     Mark done
                   </button>
                 </div>
+                <div className="mt-4 text-xs text-zinc-500">Impact score: {r.impactScore.toFixed(1)}</div>
                 <ul className="mt-3 list-disc pl-5 text-sm text-zinc-700">
-                  {r.bullets.map((b) => (
+                  {r.bullets.map((b: string) => (
                     <li key={b}>{b}</li>
                   ))}
                 </ul>
