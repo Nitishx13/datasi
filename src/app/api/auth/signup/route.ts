@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 import bcrypt from "bcryptjs";
 
-import { getSql } from "@/lib/db";
 import { getSessionCookieName } from "@/lib/auth";
+import { createSession, createUser } from "@/lib/store";
 
 function newId() {
   return crypto.randomUUID();
@@ -26,16 +26,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "email and password (min 6 chars) required" }, { status: 400 });
   }
 
-  const sql = getSql();
-
   const userId = newId();
   const passwordHash = await bcrypt.hash(password, 10);
 
   try {
-    await sql`
-      insert into users (id, email, password_hash, role, created_at, updated_at)
-      values (${userId}, ${email}, ${passwordHash}, 'user', now(), now())
-    `;
+    await createUser({ id: userId, email, passwordHash, role: "user" });
   } catch (e: any) {
     return NextResponse.json({ error: "User already exists" }, { status: 409 });
   }
@@ -43,10 +38,7 @@ export async function POST(req: Request) {
   const token = newToken();
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30); // 30 days
 
-  await sql`
-    insert into sessions (token, user_id, created_at, expires_at)
-    values (${token}, ${userId}, now(), ${expiresAt.toISOString()})
-  `;
+  await createSession(userId, token, expiresAt);
 
   const res = NextResponse.json({ user: { id: userId, email, role: "user" } });
   res.cookies.set(getSessionCookieName(), token, {

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getSql } from "@/lib/db";
+import { getSession, getUserById } from "@/lib/store";
 
 const SESSION_COOKIE = "adi_session";
 
@@ -8,17 +8,13 @@ async function getUserForRequest(req: NextRequest) {
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
-  const sql = getSql();
-  const rows = (await sql`
-    select u.id, u.email, u.role
-    from sessions s
-    join users u on u.id = s.user_id
-    where s.token = ${token}
-      and s.expires_at > now()
-    limit 1
-  `) as Array<{ id: string; email: string; role: string }>;
+  const session = await getSession(token);
+  if (!session?.userId) return null;
 
-  return rows[0] ?? null;
+  const user = await getUserById(session.userId);
+  if (!user) return null;
+
+  return { id: user.id, email: user.email, role: user.role };
 }
 
 export async function middleware(req: NextRequest) {

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
 import { getSessionCookieName } from "@/lib/auth";
-import { getSql } from "@/lib/db";
+import { createSession, getUserByEmail } from "@/lib/store";
 
 function newToken() {
   return crypto.randomUUID() + crypto.randomUUID();
@@ -22,20 +22,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "email and password required" }, { status: 400 });
   }
 
-  const sql = getSql();
-  const rows = (await sql`
-    select id, email, role, password_hash
-    from users
-    where lower(email) = ${email}
-    limit 1
-  `) as Array<{ id: string; email: string; role: string; password_hash: string | null }>;
-
-  const user = rows[0];
-  if (!user?.password_hash) {
+  const user = await getUserByEmail(email);
+  if (!user?.passwordHash) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
-  const ok = await bcrypt.compare(password, user.password_hash);
+  const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
@@ -43,10 +35,7 @@ export async function POST(req: Request) {
   const token = newToken();
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
 
-  await sql`
-    insert into sessions (token, user_id, created_at, expires_at)
-    values (${token}, ${user.id}, now(), ${expiresAt.toISOString()})
-  `;
+  await createSession(user.id, token, expiresAt);
 
   const res = NextResponse.json({ user: { id: user.id, email: user.email, role: user.role } });
   res.cookies.set(getSessionCookieName(), token, {

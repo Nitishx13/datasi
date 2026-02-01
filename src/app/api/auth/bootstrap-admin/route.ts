@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import bcrypt from "bcryptjs";
 
-import { getSql } from "@/lib/db";
+import { upsertAdminByEmail } from "@/lib/store";
 
 function isAuthorized(req: Request) {
   const expected = process.env.BOOTSTRAP_ADMIN_SECRET;
@@ -24,33 +24,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "email and password (min 6 chars) required" }, { status: 400 });
   }
 
-  const sql = getSql();
-
   const passwordHash = await bcrypt.hash(password, 10);
 
-  // If user exists, promote to admin.
-  const existing = (await sql`
-    select id
-    from users
-    where lower(email) = ${email}
-    limit 1
-  `) as Array<{ id: string }>;
-
-  if (existing[0]?.id) {
-    await sql`
-      update users
-      set role = 'admin', password_hash = ${passwordHash}, updated_at = now()
-      where id = ${existing[0].id}
-    `;
-
-    return NextResponse.json({ ok: true, userId: existing[0].id, promoted: true });
-  }
-
-  const userId = crypto.randomUUID();
-  await sql`
-    insert into users (id, email, password_hash, role, created_at, updated_at)
-    values (${userId}, ${email}, ${passwordHash}, 'admin', now(), now())
-  `;
-
-  return NextResponse.json({ ok: true, userId, promoted: false });
+  const result = await upsertAdminByEmail(email, passwordHash);
+  return NextResponse.json({ ok: true, userId: result.user.id, promoted: result.promoted });
 }

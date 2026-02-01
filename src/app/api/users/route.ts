@@ -1,20 +1,16 @@
 import { NextResponse } from "next/server";
 
-import { getSql } from "@/lib/db";
+import bcrypt from "bcryptjs";
+
+import { createUser, listUsers } from "@/lib/store";
 
 export async function GET() {
-  const sql = getSql();
-  const rows = (await sql`
-    select id, email, created_at
-    from users
-    order by created_at desc
-  `) as Array<{ id: string; email: string; created_at: string }>;
-
+  const users = await listUsers();
+  const rows = users.map((u) => ({ id: u.id, email: u.email, created_at: u.createdAt }));
   return NextResponse.json({ users: rows });
 }
 
 export async function POST(req: Request) {
-  const sql = getSql();
   const body = (await req.json().catch(() => null)) as null | { id?: string; email?: string };
   const id = body?.id?.trim();
   const email = body?.email?.trim();
@@ -23,14 +19,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "id and email are required" }, { status: 400 });
   }
 
-  await sql`insert into users (id, email) values (${id}, ${email}) on conflict (id) do update set email = excluded.email`;
-
-  const rows = (await sql`
-    select id, email, created_at
-    from users
-    where id = ${id}
-    limit 1
-  `) as Array<{ id: string; email: string; created_at: string }>;
-
-  return NextResponse.json({ user: rows[0] ?? null });
+  // Admin-created users get a random password hash (they can still use /auth/signup later).
+  const passwordHash = await bcrypt.hash(crypto.randomUUID(), 10);
+  try {
+    const user = await createUser({ id, email, passwordHash, role: "user" });
+    return NextResponse.json({ user: { id: user.id, email: user.email, created_at: user.createdAt } });
+  } catch {
+    // If already exists, return existing row.
+    const users = await listUsers();
+    const u = users.find((x) => x.id === id) ?? null;
+    return NextResponse.json({ user: u ? { id: u.id, email: u.email, created_at: u.createdAt } : null });
+  }
 }

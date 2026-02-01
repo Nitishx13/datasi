@@ -1,31 +1,20 @@
 import { NextResponse } from "next/server";
 
-import { getSql } from "@/lib/db";
+import { getRulesConfig, setRulesConfig } from "@/lib/store";
 
 export async function GET() {
-  const sql = getSql();
-  const rows = (await sql`
-    select config
-    from rules_config
-    where id = 1
-  `) as Array<{ config: unknown }>;
-  return NextResponse.json({ config: rows[0]?.config ?? null });
+  const config = await getRulesConfig();
+  return NextResponse.json({ config: config ?? null });
 }
 
 export async function PUT(req: Request) {
-  const sql = getSql();
   const body = (await req.json().catch(() => null)) as null | { config?: unknown };
 
   if (!body?.config) {
     return NextResponse.json({ error: "config is required" }, { status: 400 });
   }
 
-  await sql`
-    insert into rules_config (id, config, updated_at)
-    values (1, ${body.config}::jsonb, now())
-    on conflict (id)
-    do update set config = excluded.config, updated_at = now()
-  `;
+  await setRulesConfig(body.config);
 
   return NextResponse.json({ ok: true });
 }

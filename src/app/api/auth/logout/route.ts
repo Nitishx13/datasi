@@ -3,15 +3,14 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 import { getSessionCookieName } from "@/lib/auth";
-import { getSql } from "@/lib/db";
+import { deleteSession } from "@/lib/store";
 
 export async function POST(req: Request) {
   const cookieName = getSessionCookieName();
   const token = (await cookies()).get(cookieName)?.value;
 
-  const sql = getSql();
   if (token) {
-    await sql`delete from sessions where token = ${token}`;
+    await deleteSession(token);
   }
 
   const res = NextResponse.json({ ok: true });
