@@ -8,7 +8,9 @@ function isAuthorized(req: Request) {
   const expected = process.env.BOOTSTRAP_ADMIN_SECRET;
   if (!expected) return false;
   const provided = req.headers.get("x-bootstrap-secret") ?? "";
-  return provided === expected;
+
+  const normalize = (v: string) => v.trim().replace(/^"(.*)"$/, "$1");
+  return normalize(provided) === normalize(expected);
 }
 
 export async function POST(req: Request) {
