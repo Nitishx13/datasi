@@ -4,8 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { getActiveUserId, mockUsers, setActiveUserId } from "@/lib/userContext";
-
 const nav = [
   { href: "/app", label: "Dashboard" },
   { href: "/app/integrations", label: "Integrations" },
@@ -23,7 +21,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [activeUserId, setActiveUserIdState] = useState(() => getActiveUserId());
 
   const items = useMemo(() => nav, []);
 
@@ -47,29 +44,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             Menu
           </button>
           <div className="flex items-center gap-3 text-sm">
-            <div className="hidden items-center gap-2 lg:flex">
-              <div className="text-xs text-zinc-500">User</div>
-              <select
-                value={activeUserId}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setActiveUserIdState(next);
-                  setActiveUserId(next);
-                  router.refresh();
-                  if (typeof window !== "undefined") window.location.reload();
-                }}
-                className="h-9 rounded-full border border-zinc-200 bg-white px-3 text-sm text-zinc-900"
-              >
-                {mockUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.email}
-                  </option>
-                ))}
-              </select>
-            </div>
             <Link className="text-zinc-700 hover:text-zinc-950" href="/">
               Public site
             </Link>
+            <button
+              type="button"
+              onClick={() => {
+                (async () => {
+                  try {
+                    await fetch("/api/auth/logout", { method: "POST" });
+                  } finally {
+                    router.push("/auth/login");
+                    router.refresh();
+                  }
+                })();
+              }}
+              className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
+            >
+              Logout
+            </button>
             <Link
               className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
               href="/app/onboarding"

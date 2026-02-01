@@ -30,6 +30,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             <Link className="text-zinc-700 hover:text-zinc-950" href="/">
               Public site
             </Link>
+            <form action="/api/auth/logout" method="post">
+              <button
+                type="submit"
+                className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
+              >
+                Logout
+              </button>
+            </form>
           </div>
         </div>
       </header>

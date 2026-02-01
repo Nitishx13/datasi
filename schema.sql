@@ -3,8 +3,13 @@
 create table if not exists users (
   id text primary key,
   email text not null,
-  created_at timestamptz not null default now()
+  password_hash text,
+  role text not null default 'user',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+
+create unique index if not exists users_email_unique on users (lower(email));
 
 create table if not exists goals (
   user_id text primary key references users(id) on delete cascade,
@@ -28,6 +33,15 @@ create table if not exists recommendation_templates (
   impact_multiplier double precision not null default 1,
   updated_at timestamptz not null default now()
 );
+
+create table if not exists sessions (
+  token text primary key,
+  user_id text not null references users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null
+);
+
+create index if not exists sessions_user_id_idx on sessions (user_id);
 
 insert into rules_config (id, config)
 values (
